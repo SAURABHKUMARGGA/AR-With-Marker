@@ -5,7 +5,23 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import {ARButton} from 'three/addons/webxr/ARButton.js'
 // import trackImage from '../images/track-image.jpeg'
-
+if ('xr' in navigator) {
+  navigator.xr.isSessionSupported('immersive-vr').then(supported => {
+    if (supported) {
+      // WebXR is enabled!
+    } else {
+       window.alert("Need to enable webXR for enable follow this process.\n 1. open new tab and enter chrome://flags\n 2. Then Find WebXR Incubations and enable.\n");
+      // console.log(prompt);
+      // if(prompt!==null){
+      //   window.open("chrome://flags", "_blank");
+      // }
+      // alert("Need to enable webXR. Please enable it in chrome://flags.");
+    }
+  });
+} else {
+  // Prompt the user to enable WebXR
+  alert("Your browser doesn't support WebXR. Please enable it in chrome://flags.");
+}
 
 let scene =new THREE.Scene();
 let camera =new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,0.1,1000);
