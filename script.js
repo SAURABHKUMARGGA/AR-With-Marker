@@ -7,7 +7,6 @@ import {ARButton} from 'three/addons/webxr/ARButton.js'
 // import trackImage from '../images/track-image.jpeg'
 
 
-
 let scene =new THREE.Scene();
 let camera =new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,0.1,1000);
 camera.position.z = 5;
@@ -37,27 +36,26 @@ scene.add(directionalLightHelper);
 
 //loader 
 let loader = new GLTFLoader();
-let houseModel ;
+let houseModel;
 loader.load("house.glb",(gltf)=>{
-    let model = gltf.scene;
-    model.scale.set(0.02, 0.02, 0.02);
-    // camera.position.set(0,-55, -10);
-    // model.position.set(0,-40,-20);
-    // model.matrixAutoUpdate=false;
-    scene.add(model);
-    houseModel = model;
-    model.visible = false;
+    houseModel = gltf.scene;
+    houseModel.scale.set(0.2, 0.2, 0.2);
+    houseModel.position.set(0, -2, -5);
+    houseModel.matrixAutoUpdate = true;
+    // houseModel.visible = false;
+    scene.add(houseModel);
+    console.log('Model loaded successfully');
 })
 // houseModel.visible = false;
-let boxGeomatery =new THREE.BoxGeometry(0.1,0.1,0.1);
-boxGeomatery.translate(0,-0.2,0);
-let boxMaterial =new THREE.MeshStandardMaterial({color:"red",side:THREE.DoubleSide})
-let box =new THREE.Mesh(boxGeomatery,boxMaterial);
-box.position.set(0,0,0)
-// box.scale.set(20,20,20)
-box.visible = false;
-box.matrixAutoUpdate=false;
-scene.add(box);
+// let boxGeomatery =new THREE.BoxGeometry(0.1,0.1,0.1);
+// boxGeomatery.translate(0,-0.2,0);
+// let boxMaterial =new THREE.MeshStandardMaterial({color:"red",side:THREE.DoubleSide})
+// let box =new THREE.Mesh(boxGeomatery,boxMaterial);
+// box.position.set(0,0,0)
+// // box.scale.set(20,20,20)
+// box.visible = false;
+// box.matrixAutoUpdate=false;
+// scene.add(box);
 
 window.addEventListener("resize",()=>{
   renderer.setSize(window.innerWidth,window.innerHeight);
@@ -80,7 +78,7 @@ const arButton = ARButton.createButton(renderer, {
   trackedImages:[
     {
       image:TrackImageBitMap,
-      widthInMeters:0.5,
+      widthInMeters:0.2,
     }
   ],
   optionalFeatures: ['dom-overlay'],
@@ -95,47 +93,59 @@ function animate(){
   // renderer.render(scene,camera);
   renderer.setAnimationLoop((timestamp,frame)=>{
     if(frame){
-      const results = frame.getImageTrackingResults();
-      if (results.length > 0) {
-        const result = results[0];
-        const state = result.trackingState;
-        const referenceSpace = renderer.xr.getReferenceSpace();
-        const pose = frame.getPose(result.imageSpace,referenceSpace);
-        if (state === 'tracked') {
-          // houseModel.matrixAutoUpdate = true;
-          // model.scale.set(0.02, 0.02, 0.02);
-          box.visible = true;
-          box.matrix.fromArray(pose.transform.matrix);
-          // houseModel.updateMatrixWorld(true);
-        } else {
-          box.visible = false;
+      try {
+        const results = frame.getImageTrackingResults();
+        if (results && results.length > 0) {
+          const result = results[0];
+          const state = result.trackingState;
+          
+          if (state === 'tracked' && houseModel) {
+            const referenceSpace = renderer.xr.getReferenceSpace();
+            const pose = frame.getPose(result.imageSpace, referenceSpace);
+            
+            if (pose) {
+              houseModel.visible = true;
+              const matrix = new THREE.Matrix4();
+              matrix.fromArray(pose.transform.matrix);
+              
+              // Apply position and rotation from matrix
+              const position = new THREE.Vector3();
+              const quaternion = new THREE.Quaternion();
+              const scale = new THREE.Vector3();
+              matrix.decompose(position, quaternion, scale);
+              
+              houseModel.position.copy(position);
+              houseModel.quaternion.copy(quaternion);
+              houseModel.scale.set(0.02, 0.02, 0.02);
+            }
+          } else {
+            if (houseModel) houseModel.visible = false;
+          }
         }
+      } catch (error) {
+        console.error('Error in animation loop:', error);
       }
-      // for(const result of results){
-      //   const pose = result.pose;
-      //   const state =result.trackingState;
-      //   const imageIndex = result.index;
-      //   if(state==='tracked'){
-      //     box.visible = true;
-      //     box.matrix.fromArray(pose.transform.matrix);
-      //     box.updateMatrixWorld(true);
-      //   }else if(state==='emulated'){
-      //     box.visible = false;
-      //   }
-      // }
     }
     controls.update();
     renderer.render(scene,camera);
   })
 }
 
-renderer.xr.addEventListener("sessionstart",()=>{
-  // camera.position.z = 80;
-  // box.position.set(0,0,0);
-  // box.scale.set(0.1,0.1,0.1);
-})
-renderer.xr.addEventListener("sessionend",()=>{
-  // camera.position.z = 5;
-  // box.position.set(0,0,0);
-})
+// Add session event listeners
+// renderer.xr.addEventListener("sessionstart", () => {
+//   console.log('AR session started');
+//   if (houseModel) {
+//     houseModel.visible = false;
+//   }
+// });
+
+// renderer.xr.addEventListener("sessionend", () => {
+//   console.log('AR session ended');
+//   if (houseModel) {
+//     houseModel.visible = true;
+//     houseModel.position.set(0, -2, -5);
+//     houseModel.scale.set(0.2, 0.2, 0.2);
+//   }
+// });
+
 animate();
